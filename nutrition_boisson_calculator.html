@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculateur Nutritionnel - Boissons & Nectars</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --success: #34a853;
+      --warning: #f9a825;
+      --danger: #ea4335;
+      --light: #f8f9fa;
+      --dark: #202124;
+    }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f5f5f5; color: #333; }
+    .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h1, h2 { color: var(--primary); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
+
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #f0f7ff; font-weight: 600; }
+    input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    input:focus { outline: 2px solid var(--primary); }
+
+    .btn { padding: 10px 16px; margin: 5px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-add { background: var(--success); color: white; }
+    .btn-remove { background: var(--danger); color: white; }
+    .btn-calc { background: var(--primary); color: white; font-size: 1.1em; }
+    .btn-print { background: #555; color: white; }
+
+    .section { margin: 25px 0; padding: 15px; background: var(--light); border-radius: 8px; }
+    .label { font-weight: bold; color: var(--dark); }
+    .estimate { color: var(--warning); font-style: italic; }
+    .hidden { display: none; }
+
+    #nutrition-label { border: 2px solid #000; padding: 15px; margin-top: 20px; font-family: Arial, sans-serif; }
+    #nutrition-label th { background: #000; color: white; }
+    #nutrition-label .big { font-size: 1.3em; font-weight: bold; }
+    #nutrition-label .sub { font-size: 0.9em; padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculateur Nutritionnel - Boissons & Nectars</h1>
+    <p>Conforme au <strong>Codex Alimentarius CXG 2-1985</strong> et <strong>CXS 247-2005</strong></p>
+
+    <!-- RECETTE GÉNÉRALE -->
+    <div class="section">
+      <h2>Recette Finale</h2>
+      <div class="form-grid">
+        <div>
+          <label>Volume total (ml) :</label>
+          <input type="number" id="total-volume" value="1000" min="1">
+        </div>
+        <div>
+          <label>Type de produit :</label>
+          <select id="product-type">
+            <option value="boisson">Boisson sucrée</option>
+            <option value="nectar">Nectar de fruit</option>
+            <option value="jus">Jus de fruit 100%</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>Paramètres Physico-Chimiques (Recette Finale)</h3>
+      <div class="form-grid">
+        <div><label>Brix (°Brix) :</label><input type="number" step="0.1" id="final-brix" value="12"></div>
+        <div><label>Acidité (% ac. citrique) :</label><input type="number" step="0.01" id="final-acidite" value="0.3"></div>
+        <div><label>pH :</label><input type="number" step="0.01" id="final-ph" value="3.8"></div>
+        <div><label>Densité (g/ml) :</label><input type="number" step="0.001" id="final-densite" value="1.05"></div>
+      </div>
+    </div>
+
+    <!-- INGRÉDIENTS -->
+    <div class="section">
+      <h2>Ingrédients</h2>
+      <table id="ingredients-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Qté (g/ml)</th>
+            <th>Brix</th>
+            <th>Énergie<br>(kcal/100g)</th>
+            <th>Protéines<br>(g/100g)</th>
+            <th>Glucides<br>(g/100g)</th>
+            <th>Sucres<br>(g/100g)</th>
+            <th>Lipides<br>(g/100g)</th>
+            <th>Sodium<br>(mg/100g)</th>
+            <th>Fibres<br>(g/100g)</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="text" value="Eau"></td>
+            <td><input type="number" value="850"></td>
+            <td><input type="number" value="0" step="0.1"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><button class="btn btn-remove" onclick="removeRow(this)">Supprimer</button></td>
+          </tr>
+          <tr>
+            <td><input type="text" value="Concentré Orange 65°Brix"></td>
+            <td><input type="number" value="120"></td>
+            <td><input type="number" value="65"></td>
+            <td><input type="number" value="260"></td>
+            <td><input type="number" value="3"></td>
+            <td><input type="number" value="60"></td>
+            <td><input type="number" value="55"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="10"></td>
+            <td><input type="number" value="2"></td>
+            <td><button class="btn btn-remove" onclick="removeRow(this)">Supprimer</button></td>
+          </tr>
+          <tr>
+            <td><input type="text" value="Sucre"></td>
+            <td><input type="number" value="100"></td>
+            <td><input type="number" value="100"></td>
+            <td><input type="number" value="387"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="100"></td>
+            <td><input type="number" value="100"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><input type="number" value="0"></td>
+            <td><button class="btn btn-remove" onclick="removeRow(this)">Supprimer</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <button class="btn btn-add" onclick="addRow()">Ajouter Ingrédient</button>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="section">
+      <button class="btn btn-calc" onclick="calculate()">Calculer l'Étiquette</button>
+      <button class="btn btn-print" onclick="window.print()">Imprimer / PDF</button>
+    </div>
+
+    <!-- RÉSULTATS -->
+    <div id="results" class="section hidden">
+      <h2>Étiquette Nutritionnelle (par 100 ml)</h2>
+      <div id="nutrition-label">
+        <table style="width:100%; font-size: 14px;">
+          <tr><th colspan="2" class="big">Valeurs nutritionnelles</th></tr>
+          <tr><td>Valeur énergétique</td><td id="energy" class="big"></td></tr>
+          <tr><td>Lipides</td><td id="fats"></td></tr>
+          <tr><td class="sub">dont acides gras saturés</td><td id="satFats"></td></tr>
+          <tr><td>Glucides</td><td id="carbs"></td></tr>
+          <tr><td class="sub">dont sucres</td><td id="sugars"></td></tr>
+          <tr><td>Protéines</td><td id="proteins"></td></tr>
+          <tr><td>Sel</td><td id="salt"></td></tr>
+          <tr><td>Fibres alimentaires</td><td id="fibers"></td></tr>
+        </table>
+        <p style="margin-top:15px; font-size:12px;">
+          * Valeurs calculées selon Codex CXG 2-1985<br>
+          <span id="brix-estimate"></span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === Ajouter / Supprimer ligne ===
+    function addRow() {
+      const table = document.querySelector('#ingredients-table tbody');
+      const row = table.insertRow();
+      for (let i = 0; i < 11; i++) {
+        const cell = row.insertCell();
+        const input = document.createElement('input');
+        input.type = i === 0 ? 'text' : 'number';
+        input.step = i >= 2 ? '0.1' : 'any';
+        input.value = i === 0 ? '' : '0';
+        if (i === 10) {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-remove';
+          btn.textContent = 'Supprimer';
+          btn.onclick = () => row.remove();
+          cell.appendChild(btn);
+        } else {
+          cell.appendChild(input);
+        }
+      }
+    }
+
+    function removeRow(btn) {
+      btn.closest('tr').remove();
+    }
+
+    // === CALCUL CORRIGÉ ===
+    function calculate() {
+      const totalVolume = parseFloat(document.getElementById('total-volume').value) || 1000;
+      const rows = document.querySelectorAll('#ingredients-table tbody tr');
+      let hasNutritionData = false;
+
+      let totals = {
+        energy: 0, proteins: 0, carbs: 0, sugars: 0, fats: 0, satFats: 0, sodium: 0, fibers: 0
+      };
+
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const qty = parseFloat(inputs[1].value) || 0;
+
+        // Vérifie si au moins un ingrédient a des données nutritionnelles
+        if (parseFloat(inputs[3].value) > 0 || parseFloat(inputs[4].value) > 0) hasNutritionData = true;
+
+        totals.energy += (qty * parseFloat(inputs[3].value || 0)) / 100;
+        totals.proteins += (qty * parseFloat(inputs[4].value || 0)) / 100;
+        totals.carbs += (qty * parseFloat(inputs[5].value || 0)) / 100;
+        totals.sugars += (qty * parseFloat(inputs[6].value || 0)) / 100;
+        totals.fats += (qty * parseFloat(inputs[7].value || 0)) / 100;
+        totals.satFats += (qty * parseFloat(inputs[8].value || 0)) / 100;  // CORRIGÉ ICI
+        totals.sodium += (qty * parseFloat(inputs[8].value || 0)) / 100;
+        totals.fibers += (qty * parseFloat(inputs[9].value || 0)) / 100;
+      });
+
+      const factor = 100 / totalVolume;
+
+      // === Estimation via Brix si pas de données ===
+      if (!hasNutritionData) {
+        const brix = parseFloat(document.getElementById('final-brix').value) || 0;
+        const estimatedKcal = brix * 3.8;
+        totals.energy = estimatedKcal * (totalVolume / 100);
+        totals.carbs = totals.energy / 4;
+        totals.sugars = totals.carbs * 0.95;
+        document.getElementById('brix-estimate').textContent = `Estimation via Brix : ${estimatedKcal.toFixed(0)} kcal/100ml`;
+      } else {
+        document.getElementById('brix-estimate').textContent = '';
+      }
+
+      // === Calculs par 100ml ===
+      const per100 = {
+        energy: (totals.energy * factor).toFixed(1),
+        proteins: (totals.proteins * factor).toFixed(1),
+        carbs: (totals.carbs * factor).toFixed(1),
+        sugars: (totals.sugars * factor).toFixed(1),
+        fats: (totals.fats * factor).toFixed(1),
+        satFats: (totals.satFats * factor).toFixed(1),
+        sodium: (totals.sodium * factor).toFixed(1),
+        fibers: (totals.fibers * factor).toFixed(1)
+      };
+
+      const energyKj = (per100.energy * 4.184).toFixed(0);
+      const salt = (per100.sodium / 1000 * 2.5).toFixed(2);
+
+      // === Affichage ===
+      document.getElementById('energy').textContent = `${per100.energy} kcal / ${energyKj} kJ`;
+      document.getElementById('fats').textContent = `${per100.fats} g`;
+      document.getElementById('satFats').textContent = `${per100.satFats} g`;
+      document.getElementById('carbs').textContent = `${per100.carbs} g`;
+      document.getElementById('sugars').textContent = `${per100.sugars} g`;
+      document.getElementById('proteins').textContent = `${per100.proteins} g`;
+      document.getElementById('salt').textContent = `${salt} g`;
+      document.getElementById('fibers').textContent = `${per100.fibers} g`;
+
+      document.getElementById('results').classList.remove('hidden');
+
+      // Sauvegarde
+      saveRecipe();
+    }
+
+    // === Sauvegarde locale ===
+    function saveRecipe() {
+      const data = {
+        volume: document.getElementById('total-volume').value,
+        type: document.getElementById('product-type').value,
+        brix: document.getElementById('final-brix').value,
+        acidite: document.getElementById('final-acidite').value,
+        ph: document.getElementById('final-ph').value,
+        densite: document.getElementById('final-densite').value,
+        ingredients: []
+      };
+      document.querySelectorAll('#ingredients-table tbody tr').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        data.ingredients.push(Array.from(inputs).slice(0, 10).map(i => i.value));
+      });
+      localStorage.setItem('boisson_recipe', JSON.stringify(data));
+    }
+
+    // === Charger sauvegarde ===
+    window.onload = () => {
+      const saved = localStorage.getItem('boisson_recipe');
+      if (saved) {
+        const data = JSON.parse(saved);
+        document.getElementById('total-volume').value = data.volume;
+        document.getElementById('product-type').value = data.type;
+        document.getElementById('final-brix').value = data.brix;
+        document.getElementById('final-acidite').value = data.acidite;
+        document.getElementById('final-ph').value = data.ph;
+        document.getElementById('final-densite').value = data.densite;
+
+        const tbody = document.querySelector('#ingredients-table tbody');
+        tbody.innerHTML = '';
+        data.ingredients.forEach(ing => {
+          const row = tbody.insertRow();
+          ing.forEach((val, i) => {
+            const cell = row.insertCell();
+            if (i < 10) {
+              const input = document.createElement('input');
+              input.type = i === 0 ? 'text' : 'number';
+              input.value = val;
+              cell.appendChild(input);
+            } else {
+              const btn = document.createElement('button');
+              btn.className = 'btn btn-remove';
+              btn.textContent = 'Supprimer';
+              btn.onclick = () => row.remove();
+              cell.appendChild(btn);
+            }
+          });
+        });
+      }
+    };
+  </script>
+</body>
+</html>
