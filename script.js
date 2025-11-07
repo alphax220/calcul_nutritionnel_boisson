@@ -114,6 +114,7 @@
       localStorage.setItem('boisson_recipe', JSON.stringify(data));
     }
 
+
  // === Charger sauvegarde ===
 window.onload = () => {
   const saved = localStorage.getItem('boisson_recipe');

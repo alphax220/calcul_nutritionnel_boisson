@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestion Recettes & Stock Concentrés / Purées</title>
+  <style>
+    :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --warning: #f9a825; --light: #f8f9fa; --dark: #202124; }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f5f5f5; color: #333; }
+    .container { max-width: 1400px; margin: 20px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h1, h2 { color: var(--primary); text-align: center; }
+    .tabs { display: flex; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab { padding: 10px 20px; background: #ddd; margin: 5px; border-radius: 8px; cursor: pointer; }
+    .tab.active { background: var(--primary); color: white; }
+    .section { display: none; padding: 20px; background: var(--light); border-radius: 8px; margin-bottom: 20px; }
+    .section.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #f0f7ff; }
+    input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .btn { padding: 8px 16px; margin: 5px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-add { background: var(--success); color: white; }
+    .btn-edit { background: var(--warning); color: white; }
+    .btn-remove { background: var(--danger); color: white; }
+    .btn-calc { background: var(--primary); color: white; }
+    .recipe-ok { background: #d4edda; color: #155724; }
+    .recipe-no { background: #f8d7da; color: #721c24; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .ingredients-list { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: white; }
+
+    .recipe-ok { background: #d4edda; color: #155724; }     /* Vert */
+  .recipe-partial { background: #fff3cd; color: #856404; } /* Orange */
+  .recipe-no { background: #f8d7da; color: #721c24; }     /* Rouge */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Gestion Stock & Recettes Concentrés / Purées</h1>
+    <p>Conforme Codex Alimentarius – Usine de production boissons</p>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="master">Concentrés Maître</div>
+      <div class="tab" data-tab="recipes">Recettes</div>
+      <div class="tab" data-tab="received">Réceptions</div>
+      <div class="tab" data-tab="dashboard">Dashboard</div>
+    </div>
+
+    <!-- === MASTER CONCENTRÉS === -->
+    <div id="master" class="section active">
+      <h2>Liste Maître des Concentrés / Purées</h2>
+      <div class="form-grid">
+        <input type="hidden" id="master-id">
+        <input type="text" id="master-name" placeholder="Nom produit">
+        <input type="text" id="master-ref" placeholder="Référence">
+        <input type="text" id="master-supplier" placeholder="Fournisseur">
+        <input type="number" step="0.01" id="master-packaging" placeholder="Conditionnement (kg)">
+        <div>
+          <button class="btn btn-add" onclick="saveMaster()">Ajouter / Mettre à jour</button>
+          <button class="btn btn-remove" onclick="clearMasterForm()">Annuler</button>
+        </div>
+      </div>
+      <table id="master-table">
+        <thead><tr><th>Nom</th><th>Réf</th><th>Fournisseur</th><th>Conditionnement kg</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- === RECETTES === -->
+    <div id="recipes" class="section">
+      <h2>Création Recette</h2>
+      <div class="form-grid">
+        <input type="hidden" id="recipe-id">
+        <input type="text" id="recipe-name" placeholder="Nom recette">
+        <input type="number" step="0.01" min="0.01" id="recipe-volume-l" placeholder="Volume du batch (L)" value="13090">
+        <div>
+          <select id="recipe-concentrate-select"></select>
+          <input type="number" step="0.000001" id="recipe-qty" placeholder="Quantité (kg par L de produit final)">
+          <button class="btn btn-add" onclick="addIngredientToRecipe()">+ Ingrédient</button>
+        </div>
+        <div class="ingredients-list" id="recipe-ingredients-list"></div>
+        <div>
+          <button class="btn btn-add" onclick="saveRecipe()">Sauvegarder Recette</button>
+          <button class="btn btn-remove" onclick="clearRecipeForm()">Annuler</button>
+        </div>
+      </div>
+      <table id="recipes-table">
+        <thead><tr><th>Nom Recette</th><th>Volume Batch (L)</th><th>Ingrédients (kg/L)</th><th>Total par batch (kg)</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- === RÉCEPTIONS === -->
+    <div id="received" class="section">
+      <h2>Réception Concentrés</h2>
+      <div class="form-grid">
+        <input type="hidden" id="received-id">
+        <select id="received-concentrate-select"></select>
+        <input type="number" step="0.01" id="received-qty" placeholder="Quantité reçue (kg)">
+        <div>
+          <button class="btn btn-add" onclick="saveReceived()">Enregistrer</button>
+          <button class="btn btn-remove" onclick="clearReceivedForm()">Annuler</button>
+        </div>
+      </div>
+      <table id="received-table">
+        <thead><tr><th>Concentré</th><th>Quantité kg</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- === DASHBOARD === -->
+    <div id="dashboard" class="section">
+      <h2>Dashboard – Recettes Possibles</h2>
+      <button class="btn btn-calc" onclick="updateDashboard()">Actualiser</button>
+      <div id="stock-summary"></div>
+      <table id="dashboard-table">
+        <thead><tr><th>Recette</th><th>Statut</th><th>Batches possibles</th><th>Volume Total (L)</th><th>Détails</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // === DATA STRUCTURES ===
+    let master = []; // [{id, name, ref, supplier, packaging_kg}]
+    let recipes = []; // [{id, name, volume_l, ingredients: [{concentrate_id, qty_kg_per_L}]}]
+    let received = []; // [{id, concentrate_id, qty_kg, date}]
+
+    // === LOAD & SAVE ===
+    function loadData() {
+      master = JSON.parse(localStorage.getItem('master_concentrates')) || [];
+      recipes = JSON.parse(localStorage.getItem('recipes')) || [];
+      received = JSON.parse(localStorage.getItem('received_stock')) || [];
+      renderAll();
+    }
+
+    function saveData() {
+      localStorage.setItem('master_concentrates', JSON.stringify(master));
+      localStorage.setItem('recipes', JSON.stringify(recipes));
+      localStorage.setItem('received_stock', JSON.stringify(received));
+    }
+
+    // === RENDER ===
+    function renderMaster() {
+      const tbody = document.querySelector('#master-table tbody');
+      tbody.innerHTML = '';
+      master.forEach(c => {
+        const tr = tbody.insertRow();
+        tr.innerHTML = `<td>${c.name}</td><td>${c.ref}</td><td>${c.supplier}</td><td>${c.packaging_kg}</td>
+          <td><button class="btn btn-edit" onclick="editMaster('${c.id}')">Éditer</button>
+              <button class="btn btn-remove" onclick="deleteMaster('${c.id}')">Supprimer</button></td>`;
+      });
+      updateSelects();
+    }
+
+    function renderRecipes() {
+      const tbody = document.querySelector('#recipes-table tbody');
+      tbody.innerHTML = '';
+      recipes.forEach(r => {
+        const ingredients = r.ingredients.map(i => {
+          const conc = master.find(c => c.id === i.concentrate_id);
+          const totalKg = (i.qty_kg_per_L * r.volume_l).toFixed(4);
+          return `${conc ? conc.name : 'Inconnu'} : ${i.qty_kg_per_L} kg/L`;
+        }).join('<br>');
+        const totalPerBatch = r.ingredients.map(i => {
+          const conc = master.find(c => c.id === i.concentrate_id);
+          const totalKg = (i.qty_kg_per_L * r.volume_l).toFixed(2);
+          return `${conc ? conc.name : 'Inconnu'} : ${totalKg} kg`;
+        }).join('<br>');
+        const tr = tbody.insertRow();
+        tr.innerHTML = `<td>${r.name}</td><td>${r.volume_l}</td><td>${ingredients}</td><td>${totalPerBatch}</td>
+          <td><button class="btn btn-edit" onclick="editRecipe('${r.id}')">Éditer</button>
+              <button class="btn btn-remove" onclick="deleteRecipe('${r.id}')">Supprimer</button></td>`;
+      });
+    }
+
+    function renderReceived() {
+      const tbody = document.querySelector('#received-table tbody');
+      tbody.innerHTML = '';
+      received.forEach(r => {
+        const conc = master.find(c => c.id === r.concentrate_id);
+        const tr = tbody.insertRow();
+        tr.innerHTML = `<td>${conc ? conc.name : 'Inconnu'}</td><td>${r.qty_kg}</td><td>${new Date(r.date).toLocaleDateString()}</td>
+          <td><button class="btn btn-edit" onclick="editReceived('${r.id}')">Éditer</button>
+              <button class="btn btn-remove" onclick="deleteReceived('${r.id}')">Supprimer</button></td>`;
+      });
+    }
+
+    function renderAll() {
+      renderMaster();
+      renderRecipes();
+      renderReceived();
+      updateDashboard();
+    }
+
+    // === SELECTS ===
+    function updateSelects() {
+      const selects = ['recipe-concentrate-select', 'received-concentrate-select'];
+      selects.forEach(selId => {
+        const select = document.getElementById(selId);
+        select.innerHTML = '<option value="">Choisir...</option>';
+        master.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (${c.ref}) - ${c.supplier}`;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    // === MASTER CRUD ===
+    function saveMaster() {
+      const id = document.getElementById('master-id').value || Date.now().toString();
+      const name = document.getElementById('master-name').value.trim();
+      const ref = document.getElementById('master-ref').value.trim();
+      const supplier = document.getElementById('master-supplier').value.trim();
+      const packaging = parseFloat(document.getElementById('master-packaging').value) || 0;
+
+      if (!name || !ref || !supplier || packaging <= 0) {
+        alert("Tous les champs sont obligatoires !");
+        return;
+      }
+
+      const item = { id, name, ref, supplier, packaging_kg: packaging };
+      const index = master.findIndex(c => c.id === id);
+      if (index > -1) master[index] = item; else master.push(item);
+      saveData();
+      renderAll();
+      clearMasterForm();
+    }
+
+    function editMaster(id) {
+      const c = master.find(c => c.id === id);
+      if (!c) return;
+      document.getElementById('master-id').value = c.id;
+      document.getElementById('master-name').value = c.name;
+      document.getElementById('master-ref').value = c.ref;
+      document.getElementById('master-supplier').value = c.supplier;
+      document.getElementById('master-packaging').value = c.packaging_kg;
+    }
+
+    function deleteMaster(id) {
+      if (confirm('Supprimer ce concentré ?')) {
+        master = master.filter(c => c.id !== id);
+        saveData();
+        renderAll();
+      }
+    }
+
+    function clearMasterForm() {
+      document.getElementById('master-id').value = '';
+      document.getElementById('master-name').value = '';
+      document.getElementById('master-ref').value = '';
+      document.getElementById('master-supplier').value = '';
+      document.getElementById('master-packaging').value = '';
+    }
+
+    // === RECIPES CRUD ===
+    let currentRecipeIngredients = [];
+
+    function addIngredientToRecipe() {
+      const concId = document.getElementById('recipe-concentrate-select').value;
+      const qty = parseFloat(document.getElementById('recipe-qty').value);
+      if (!concId || isNaN(qty) || qty <= 0) return alert('Choisir un concentré et quantité > 0');
+      currentRecipeIngredients.push({ concentrate_id: concId, qty_kg_per_L: qty });
+      renderCurrentIngredients();
+      document.getElementById('recipe-qty').value = '';
+    }
+
+    function renderCurrentIngredients() {
+      const list = document.getElementById('recipe-ingredients-list');
+      list.innerHTML = '';
+      currentRecipeIngredients.forEach((ing, idx) => {
+        const conc = master.find(c => c.id === ing.concentrate_id);
+        const div = document.createElement('div');
+        div.innerHTML = `${conc ? conc.name : 'Inconnu'} : ${ing.qty_kg_per_L} kg/L`;
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-remove';
+        btn.textContent = 'X';
+        btn.onclick = () => {
+          currentRecipeIngredients.splice(idx, 1);
+          renderCurrentIngredients();
+        };
+        div.appendChild(btn);
+        list.appendChild(div);
+      });
+    }
+
+    function saveRecipe() {
+      if (currentRecipeIngredients.length === 0) return alert('Ajouter au moins un ingrédient');
+      const id = document.getElementById('recipe-id').value || Date.now().toString();
+      const name = document.getElementById('recipe-name').value.trim() || 'Recette sans nom';
+      const volume_l = parseFloat(document.getElementById('recipe-volume-l').value);
+      if (isNaN(volume_l) || volume_l <= 0) return alert('Volume du batch doit être > 0');
+
+      const recipe = { id, name, volume_l, ingredients: currentRecipeIngredients };
+      const index = recipes.findIndex(r => r.id === id);
+      if (index > -1) recipes[index] = recipe; else recipes.push(recipe);
+      saveData();
+      renderAll();
+      clearRecipeForm();
+    }
+
+    function editRecipe(id) {
+      const r = recipes.find(r => r.id === id);
+      document.getElementById('recipe-id').value = r.id;
+      document.getElementById('recipe-name').value = r.name;
+      document.getElementById('recipe-volume-l').value = r.volume_l;
+      currentRecipeIngredients = r.ingredients.map(i => ({...i}));
+      renderCurrentIngredients();
+    }
+
+    function deleteRecipe(id) {
+      if (confirm('Supprimer cette recette ?')) {
+        recipes = recipes.filter(r => r.id !== id);
+        saveData();
+        renderAll();
+      }
+    }
+
+    function clearRecipeForm() {
+      document.getElementById('recipe-id').value = '';
+      document.getElementById('recipe-name').value = '';
+      document.getElementById('recipe-volume-l').value = '13090';
+      currentRecipeIngredients = [];
+      renderCurrentIngredients();
+    }
+
+    // === RECEIVED CRUD ===
+    function saveReceived() {
+      const concId = document.getElementById('received-concentrate-select').value;
+      const qty = parseFloat(document.getElementById('received-qty').value);
+      if (!concId || isNaN(qty) || qty <= 0) return alert('Choisir et quantité > 0');
+      const id = document.getElementById('received-id').value || Date.now().toString();
+      const item = { id, concentrate_id: concId, qty_kg: qty, date: new Date().toISOString() };
+      const index = received.findIndex(r => r.id === id);
+      if (index > -1) received[index] = item; else received.push(item);
+      saveData();
+      renderAll();
+      clearReceivedForm();
+    }
+
+    function editReceived(id) {
+      const r = received.find(r => r.id === id);
+      document.getElementById('received-id').value = r.id;
+      document.getElementById('received-concentrate-select').value = r.concentrate_id;
+      document.getElementById('received-qty').value = r.qty_kg;
+    }
+
+    function deleteReceived(id) {
+      if (confirm('Supprimer cette réception ?')) {
+        received = received.filter(r => r.id !== id);
+        saveData();
+        renderAll();
+      }
+    }
+
+    function clearReceivedForm() {
+      document.getElementById('received-id').value = '';
+      document.getElementById('received-qty').value = '';
+    }
+
+   // === DASHBOARD ===
+function updateDashboard() {
+  const stock = {};
+  received.forEach(r => {
+    stock[r.concentrate_id] = (stock[r.concentrate_id] || 0) + r.qty_kg;
+  });
+
+  const summary = document.getElementById('stock-summary');
+  summary.innerHTML = '<h3>Stock actuel</h3>';
+  Object.keys(stock).forEach(id => {
+    const conc = master.find(c => c.id === id);
+    if (conc) summary.innerHTML += `<p><strong>${conc.name}</strong> : ${stock[id].toFixed(2)} kg</p>`;
+  });
+
+  const tbody = document.querySelector('#dashboard-table tbody');
+  tbody.innerHTML = '';
+  recipes.forEach(r => {
+    let possible = true;
+    let partial = false;
+    let minBatches = Infinity;
+    let details = [];
+
+    r.ingredients.forEach(ing => {
+      const available = stock[ing.concentrate_id] || 0;
+      const requiredPerBatch = ing.qty_kg_per_L * r.volume_l;
+      const batches = Math.floor(available / requiredPerBatch);
+      const concName = master.find(c => c.id === ing.concentrate_id)?.name || 'Inconnu';
+      details.push(`${concName} : ${available.toFixed(2)} kg / ${requiredPerBatch.toFixed(4)} kg → ${batches} batch(s)`);
+
+      if (batches >= 1) partial = true;
+      if (batches < 1) possible = false;
+      minBatches = Math.min(minBatches, batches);
+    });
+
+    const totalVolume = minBatches * r.volume_l;
+
+    const tr = tbody.insertRow();
+    if (possible) {
+      tr.className = 'recipe-ok';
+      tr.innerHTML = `<td>${r.name}</td><td>OK (Vert)</td><td>${minBatches}</td><td>${totalVolume.toFixed(0)} L</td><td>${details.join('<br>')}</td>`;
+    } else if (partial) {
+      tr.className = 'recipe-partial';
+      tr.innerHTML = `<td>${r.name}</td><td>Partiel (Orange)</td><td>${minBatches}</td><td>${totalVolume.toFixed(0)} L</td><td>${details.join('<br>')}</td>`;
+    } else {
+      tr.className = 'recipe-no';
+      tr.innerHTML = `<td>${r.name}</td><td>Impossible (Rouge)</td><td>${minBatches}</td><td>${totalVolume.toFixed(0)} L</td><td>${details.join('<br>')}</td>`;
+    }
+  });
+}
+
+    // === TABS ===
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      };
+    });
+
+    // === INIT ===
+    window.onload = () => {
+      loadData();
+      updateSelects();
+    };
+  </script>
+</body>
+</html>
